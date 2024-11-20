@@ -9,6 +9,7 @@ class Pala:
         self.angulo = 0
         self.imagen = pygame.transform.rotate(self.imagen_original, self.angulo)
         self.forma = self.imagen.get_rect()
+        self.inventario = None
     
     def update(self, personaje):
         self.forma.center = personaje.forma.center
@@ -77,9 +78,15 @@ class WateringCan:
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, image, x, y, angle):
       pygame.sprite.Sprite.__init__(self)
-      self.imagen_original = image
+      self.frames = [
+          pygame.image.load("assets//image//bullets//bullet1.png").convert_alpha(),
+          pygame.image.load("assets//image//bullets//bullet2.png").convert_alpha(),
+          pygame.image.load("assets//image//bullets//bullet3.png").convert_alpha()
+      ]
+      self.frame_index = 0
+      self.update_time = pygame.time.get_ticks()
       self.angulo = angle
-      self.image = pygame.transform.rotate(self.imagen_original, self.angulo)
+      self.image = pygame.transform.rotate(self.frames[self.frame_index], self.angulo)
       self.rect = self.image.get_rect()
       self.rect.center = (x,y)
       self.delta_x = math.cos(math.radians(self.angulo))*constantes.VELOCIDAD_BALA
@@ -88,6 +95,14 @@ class Bullet(pygame.sprite.Sprite):
     def update(self):
         self.rect.x += self.delta_x
         self.rect.y += self.delta_y
+        
+        # Actualizar animación
+        animation_cooldown = 100  # milisegundos entre frames
+        if pygame.time.get_ticks() - self.update_time > animation_cooldown:
+            self.frame_index = (self.frame_index + 1) % len(self.frames)
+            self.image = pygame.transform.rotate(self.frames[self.frame_index], self.angulo)
+            self.update_time = pygame.time.get_ticks()
+            
         if self.rect.right < 0 or self.rect.left > constantes.ANCHO_VENTANA or self.rect.top > constantes.ALTO_VENTANA:
             self.kill()
 

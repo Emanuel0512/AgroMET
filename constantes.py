@@ -6,7 +6,7 @@ ALTO_VENTANA = 600
 SCALA_PERSONAJE = 0.4
 SCALA_WATERING_CAN = 0.15
 SCALA_HERRAMIENTA = 0.7
-SECALA_HUECO = 0.8
+SECALA_HUECO = 1.2
 
 # COLORES
 PERSONAJE_AMARILLO = (255, 255, 0)
@@ -34,16 +34,22 @@ VELOCIDAD_NPC = 0
 
 # CULTIVO
 MAX_HUECOS_POR_ZONA = 4
+MAX_PLANTAS_POR_ZONA = 4
 TIEMPO_CAMBIO_FASE = 10000  # 10 segundos en milisegundos
+TIEMPO_REPRODUCCION = 15000  # 15 segundos para reproducirse
+DISTANCIA_REPRODUCCION = 100  # Distancia máxima para nueva planta
+MAX_INTENTOS_REPRODUCCION = 5  # Máximo número de intentos para encontrar espacio # Tamaño cuadrado de la zona de cultivo
 ZONAS_CULTIVO = [
-    pygame.Rect(170, 400, 100, 100),  # Zona inferior izquierda
-    pygame.Rect(400, 100, 200, 100),  # Zona inferior derecha
-    pygame.Rect(200, 20, 200, 100)   # Zona central
+    pygame.Rect(170, 400, 260, 120),  # Zona inferior izquierda
+    pygame.Rect(280, 121, 260, 120),  # Zona inferior derecha
+    pygame.Rect(280, 1, 260, 120)    # Zona central
 ]
 
-TAMANO_PLANTA = 45
+TAMANO_PLANTA = 50
 GRID_SIZE = TAMANO_PLANTA  # Para alinear los huecos en una cuadrícula
 TIEMPO_CRECIMIENTO = 7000
+GRID_COLS = 4  # Número de columnas en la cuadrícula
+GRID_ROWS = 2  # Número de filas en la cuadrícula
 
 # Información educativa de cultivos
 INFO_CULTIVOS = {

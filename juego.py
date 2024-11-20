@@ -5,6 +5,7 @@ from weapon import Pala
 from weapon import WateringCan
 from NPC import NPC
 from planta import Planta
+from plant_details_window import PlantDetailsWindow
 import sys
 from inventario import Inventario
 from clima import SistemaClima
@@ -88,81 +89,92 @@ def mostrar_mensaje_con_fondo_texto(ventana, mensaje, x, y, color_texto, color_f
     pygame.draw.rect(ventana, color_fondo, rect_fondo)
     ventana.blit(texto, (x, y))
 
-def crear_hueco(jugador, huecos):
-    direccion = jugador.direccion
-    if direccion is None:
-        direccion = 'abajo' 
-        
-    offset = -90
-    offset_2 = 10
-    hueco_x, hueco_y = jugador.forma.x, jugador.forma.y 
-
-    if direccion == 'derecha':
-        hueco_x = jugador.forma.x + jugador.forma.width + offset
-        hueco_y = jugador.forma.y + jugador.forma.height // 3
-    elif direccion == 'izquierda':
-        hueco_x = jugador.forma.x + offset_2
-        hueco_y = jugador.forma.y + jugador.forma.height // 3
-    elif direccion == 'arriba':
-        hueco_x = jugador.forma.x + jugador.forma.width // 3
-        hueco_y = jugador.forma.y - offset
-    elif direccion == 'abajo':
-        hueco_x = jugador.forma.x + jugador.forma.width // 3
-        hueco_y = jugador.forma.y + jugador.forma.height + offset
-    
-    if jugador.crear_hueco(hueco_x, hueco_y):
-        huecos.append((hueco_x, hueco_y))
-        print("Hueco creado")
-    else:
-        print("No puedes crear un hueco aquí")
+def crear_hueco(jugador, pos_x, pos_y, zonas_cultivo):
+    for zona in zonas_cultivo:
+        if zona.rect.collidepoint(pos_x, pos_y):
+            if zona.puede_agregar_hueco():
+                if zona.agregar_hueco(pos_x, pos_y):
+                    print("Hueco creado")
+                    return True
+            else:
+                print("Esta zona ya tiene el máximo de huecos permitidos (4)")
+                return False
+    print("No puedes crear un hueco aquí")
+    return False
 
 def inicializar_juego():
     animaciones, imagen_pala, imagen_bala, imagen_npc, imagen_hueco, imagen_fondo, imagen_watering_can = cargar_imagenes()
     imagen_tierra = cargar_y_escalar_imagen_tierra("assets//image//tierra.png", constantes.ZONAS_CULTIVO)
-    jugador = Personaje(50, 50, animaciones)
+    jugador = Personaje(constantes.ANCHO_VENTANA // 2, constantes.ALTO_VENTANA // 2, animaciones)
     npc = NPC(100, 100, imagen_npc)
     pala = Pala(imagen_pala, imagen_bala)
     inventario = Inventario(imagen_pala, imagen_watering_can, imagen_bala)
     grupo_balas = pygame.sprite.Group()
     huecos = []
     sistema_clima = SistemaClima()
-    return jugador, npc, pala, grupo_balas, huecos, imagen_hueco, imagen_fondo, imagen_tierra, sistema_clima
+    return jugador, npc, pala, grupo_balas, huecos, imagen_hueco, imagen_fondo, imagen_tierra, sistema_clima, inventario, imagen_hueco
 
 class ZonaCultivo:
     def __init__(self, rect):
         self.rect = rect
         self.huecos = []
-        self.plantas = {}  
+        self.plantas = {}  # Changed back to dictionary with hueco as key
+        self.max_plantas = constantes.MAX_HUECOS_POR_ZONA
 
     def puede_agregar_hueco(self):
         return len(self.huecos) < constantes.MAX_HUECOS_POR_ZONA
 
     def agregar_hueco(self, x, y):
-        if self.puede_agregar_hueco():
+        if not self.puede_agregar_hueco():
+            print("Máximo de huecos alcanzado")
+            return False
 
-            hueco_x = x - (x % constantes.TAMANO_PLANTA)
-            hueco_y = y - (y % constantes.TAMANO_PLANTA)
+        # Verificar si ya existe una planta en esta posición
+        for planta_pos, planta in self.plantas.items():
+            planta_x, planta_y = planta_pos
+            if abs(planta_x - x) < constantes.TAMANO_PLANTA and abs(planta_y - y) < constantes.TAMANO_PLANTA:
+                print("No se puede crear un hueco sobre una planta")
+                return False
 
-            nuevo_hueco = pygame.Rect(hueco_x, hueco_y, constantes.TAMANO_PLANTA, constantes.TAMANO_PLANTA)
-            nuevo_hueco = pygame.Rect(x, y, constantes.TAMANO_PLANTA, constantes.TAMANO_PLANTA)
-            for hueco in self.huecos:
-                if nuevo_hueco.colliderect(hueco):
-                    return False
+        # Calcular la posición en la cuadrícula
+        rel_x = x - self.rect.x
+        rel_y = y - self.rect.y
+        
+        # Encontrar la siguiente posición disponible en la cuadrícula
+        next_pos = len(self.huecos)
+        grid_row = next_pos // constantes.GRID_COLS
+        grid_col = next_pos % constantes.GRID_COLS
+        
+        if grid_row >= constantes.GRID_ROWS:
+            print("No hay más espacio en la cuadrícula")
+            return False
+            
+        # Calcular la posición exacta del nuevo hueco
+        hueco_x = self.rect.x + (grid_col * constantes.TAMANO_PLANTA)
+        hueco_y = self.rect.y + (grid_row * constantes.TAMANO_PLANTA)
+        
+        nuevo_hueco = pygame.Rect(hueco_x, hueco_y, constantes.TAMANO_PLANTA, constantes.TAMANO_PLANTA)
+        
+        # Verificar si ya existe un hueco en esta posición
+        for hueco in self.huecos:
+            if hueco.colliderect(nuevo_hueco):
+                return False
+        
+        self.huecos.append(nuevo_hueco)
+        print(f"Hueco creado en posición [{grid_col},{grid_row}]")
+        return True
 
-            if len(self.huecos) < constantes.MAX_HUECOS_POR_ZONA:
-                self.huecos.append(nuevo_hueco)
-                return True
-        return False
-
-    def agregar_planta(self, hueco_pos):
-        if hueco_pos in self.huecos and hueco_pos not in self.plantas:
-            self.plantas[hueco_pos] = Planta(hueco_pos[0], hueco_pos[1])
+    def agregar_planta(self, hueco):
+        hueco_key = (hueco.x, hueco.y)
+        if hueco in self.huecos and hueco_key not in self.plantas:
+            nueva_planta = Planta(hueco.x, hueco.y)
+            self.plantas[hueco_key] = nueva_planta
             return True
         return False
 
     def regar_planta(self, pos):
         for planta in self.plantas.values():
-            if planta.rect.collidepoint(pos):
+            if planta.rect.collidepoint(pos[0], pos[1]):
                 return planta.regar()
         return False
     
@@ -174,6 +186,9 @@ def ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos,
     turno_personaje = False
     dialogos_npc = ["¡Hola Miguel!", "¿Cómo estás?", "¡Qué buen día!"]
     dialogo_personaje = ["¡Hola Sebastián!", "Estoy bien, gracias", "Sí, lo es"]
+    
+    # Inicializar el sistema de tutorial
+    sistema_tutorial = SistemaTutorial()
 
     run = True
     while run:
@@ -183,8 +198,6 @@ def ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos,
         dibujar_zonas_cultivo(ventana, zonas_cultivo, imagen_tierra)
         
         for zona in zonas_cultivo:
-            for hueco in zona.huecos:
-                ventana.blit(imagen_hueco, hueco.topleft)
             for planta in zona.plantas.values():
                 resultado = planta.update()
                 if resultado == "completado":
@@ -211,8 +224,10 @@ def ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos,
         npc.update()
         pala.update(jugador)
 
-        for hueco in huecos:
-            ventana.blit(imagen_hueco, hueco)
+        # Dibujar huecos existentes
+        for zona in zonas_cultivo:
+            for hueco in zona.huecos:
+                ventana.blit(imagen_hueco, (hueco.x - 10, hueco.y))
         
         npc.draw(ventana)
         jugador.dibujar(ventana)
@@ -236,10 +251,22 @@ def ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos,
                 run = False
                 
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_a: mover_izquierda = True
-                if event.key == pygame.K_d: mover_derecha = True
-                if event.key == pygame.K_w: mover_arriba = True
-                if event.key == pygame.K_s: mover_abajo = True
+                if event.key == pygame.K_a: 
+                    mover_izquierda = True
+                    if sistema_tutorial.paso_actual == 1:  # Tutorial de movimiento
+                        sistema_tutorial.siguiente_paso()
+                if event.key == pygame.K_d: 
+                    mover_derecha = True
+                    if sistema_tutorial.paso_actual == 1:
+                        sistema_tutorial.siguiente_paso()
+                if event.key == pygame.K_w: 
+                    mover_arriba = True
+                    if sistema_tutorial.paso_actual == 1:
+                        sistema_tutorial.siguiente_paso()
+                if event.key == pygame.K_s: 
+                    mover_abajo = True
+                    if sistema_tutorial.paso_actual == 1:
+                        sistema_tutorial.siguiente_paso()
                 
                 if event.key == pygame.K_SPACE and dialogo_activo:
                     turno_personaje = not turno_personaje
@@ -248,11 +275,7 @@ def ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos,
                         if indice_dialogo >= len(dialogos_npc):
                             indice_dialogo = 0  
                 
-                if event.key == pygame.K_c:
-                    if jugador.cultivar(zonas_cultivo):
-                        print("Planta cultivada!")
-                    else:
-                        print("No estás en una zona de cultivo.")
+                
                 
                 if event.key == pygame.K_i:
                     inventario.toggle()
@@ -269,26 +292,65 @@ def ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos,
                 if event.key == pygame.K_w: mover_arriba = False
                 if event.key == pygame.K_s: mover_abajo = False
 
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  
+            if event.type == pygame.MOUSEBUTTONDOWN:
                 pos = pygame.mouse.get_pos()
-                for zona in zonas_cultivo:
-                    if zona.rect.collidepoint(pos) and inventario.herramienta_actual == 'pala':
-                        hueco_x = zona.rect.x + ((pos[0] - zona.rect.x) // constantes.TAMANO_PLANTA) * constantes.TAMANO_PLANTA
-                        hueco_y = zona.rect.y + ((pos[1] - zona.rect.y) // constantes.TAMANO_PLANTA) * constantes.TAMANO_PLANTA
-                        
-                        if len(zona.huecos) < 4:  # Límite de 4 huecos por zona
-                            if zona.agregar_hueco(hueco_x, hueco_y):
-                                print("Hueco creado")
+                if event.button == 1:  # Click izquierdo
+                    for zona in zonas_cultivo:
+                        if zona.rect.collidepoint(pos) and inventario.herramienta_actual == 'pala':
+                            if len(zona.huecos) < constantes.MAX_HUECOS_POR_ZONA:
+                                if zona.agregar_hueco(pos[0], pos[1]):
+                                    # Dibujar el hueco inmediatamente
+                                    hueco = zona.huecos[-1]  # Get the last added hole
+                                    ventana.blit(imagen_hueco, (hueco.x - 15, hueco.y))
+                                    pygame.display.update()
                             else:
-                                print("Ya existe un hueco en esta posición")
-                        else:
-                            print("Máximo de huecos alcanzado en esta zona")
-                    elif zona.rect.collidepoint(pos) and inventario.herramienta_actual == 'regadera':
-                        if zona.regar_planta(pos):
-                            print("Planta regada")
+                                print("Esta zona ya tiene el máximo de huecos permitidos")
+                        elif zona.rect.collidepoint(pos) and inventario.herramienta_actual == 'regadera':
+                            if zona.regar_planta(pos):
+                                print("Planta regada")
+                elif event.button == 3:  # Click derecho para plantar o ver detalles
+                    for zona in zonas_cultivo:
+                        # Primero, verificar si hay una planta en la posición del click
+                        for planta in zona.plantas.values():
+                            if planta.rect.collidepoint(pos):
+                                # Mostrar detalles de la planta
+                                details_window = PlantDetailsWindow(planta)
+                                details_window.run(ventana)
+                                break
+                        # Si no se hizo click en una planta, intentar plantar
+                        if zona.rect.collidepoint(pos):
+                            # Buscar si ya existe un hueco en esa posición
+                            hueco_encontrado = None
+                            for hueco in zona.huecos:
+                                if hueco.collidepoint(pos):
+                                    hueco_encontrado = hueco
+                                    break
+                            
+                            if hueco_encontrado:
+                                # Si hay hueco, intentar plantar
+                                # Verificar el límite de plantas en la zona actual
+                                if len(zona.plantas) < constantes.MAX_PLANTAS_POR_ZONA:
+                                    if zona.agregar_planta(hueco_encontrado):
+                                        # Buscar y eliminar el hueco por posición
+                                        hueco_a_eliminar = None
+                                        for h in zona.huecos:
+                                            if h.x == hueco_encontrado.x and h.y == hueco_encontrado.y:
+                                                hueco_a_eliminar = h
+                                                break
+                                        if hueco_a_eliminar:
+                                            zona.huecos.remove(hueco_a_eliminar)
+                                            print(f"Planta cultivada en posición ({hueco_encontrado.x}, {hueco_encontrado.y})")
+                                        else:
+                                            print("Error: No se pudo eliminar el hueco")
+                                    else:
+                                        print("No se puede cultivar aquí")
+                                else:
+                                    print(f"Máximo de plantas alcanzado en esta zona ({constantes.MAX_PLANTAS_POR_ZONA})")
+                            else:
+                                print("Primero debes crear un hueco con click izquierdo")
 
         herramienta_actual = inventario.get_herramienta_actual()
-        if herramienta_actual:
+        if herramienta_actual is not None:
             herramienta_actual.update(jugador)
             herramienta_actual.dibujar(ventana)
 
@@ -302,6 +364,9 @@ def ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos,
         texto_clima = font.render(f"Temp: {info_clima['temperatura']}°C  Humedad: {info_clima['humedad']}%  {'Lluvia' if info_clima['lluvia'] else 'Despejado'}", True, constantes.WHITE)
         ventana.blit(texto_clima, (10, constantes.ALTO_VENTANA - 30))
 
+        # Mostrar el tutorial si está activo
+        sistema_tutorial.mostrar_tutorial(ventana)
+        
         pygame.display.flip()
 
     return True
@@ -370,8 +435,50 @@ def pantalla_carga(ventana):
     
     return True
 
-def nueva_funcion():
-    print("Nueva función agregada!")
+def mostrar_menu_plantas(ventana, pos):
+    # Lista de plantas disponibles
+    plantas_disponibles = ["Tomate", "Zanahoria", "Lechuga", "Papa"]
+    
+    # Crear rectángulos para cada opción
+    opciones = []
+    ancho_opcion = 100
+    alto_opcion = 30
+    x = pos[0]
+    y = pos[1]
+    
+    # Dibujar fondo del menú
+    menu_rect = pygame.Rect(x, y, ancho_opcion, alto_opcion * len(plantas_disponibles))
+    pygame.draw.rect(ventana, constantes.WHITE, menu_rect)
+    pygame.draw.rect(ventana, constantes.BLACK, menu_rect, 2)
+    
+    # Dibujar opciones
+    font = pygame.font.Font(None, 24)
+    for i, planta in enumerate(plantas_disponibles):
+        opcion_rect = pygame.Rect(x, y + i * alto_opcion, ancho_opcion, alto_opcion)
+        pygame.draw.rect(ventana, constantes.WHITE, opcion_rect)
+        pygame.draw.rect(ventana, constantes.BLACK, opcion_rect, 1)
+        
+        texto = font.render(planta, True, constantes.BLACK)
+        texto_rect = texto.get_rect(center=opcion_rect.center)
+        ventana.blit(texto, texto_rect)
+        opciones.append((opcion_rect, planta))
+    
+    pygame.display.flip()
+    
+    # Esperar selección
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:  # Click izquierdo
+                    mouse_pos = pygame.mouse.get_pos()
+                    for rect, planta in opciones:
+                        if rect.collidepoint(mouse_pos):
+                            return planta
+                elif event.button == 3:  # Click derecho para cancelar
+                    return None
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:  # ESC para cancelar
+                    return None
     
 def main():
     try:
@@ -385,11 +492,9 @@ def main():
             print(f"Pantalla de carga completada: {carga_completada}")
             
             if carga_completada:
-                jugador, npc, pala, grupo_balas, huecos, imagen_hueco, imagen_fondo, imagen_tierra, sistema_clima = inicializar_juego()
-                animaciones, imagen_pala, imagen_bala, imagen_npc, imagen_hueco, imagen_fondo, imagen_watering_can = cargar_imagenes()
-                inventario = Inventario(imagen_pala, imagen_watering_can, imagen_bala)
+                # Inicializar todos los componentes del juego
+                jugador, npc, pala, grupo_balas, huecos, imagen_hueco, imagen_fondo, imagen_tierra, sistema_clima, inventario, imagen_hueco = inicializar_juego()
                 zonas_cultivo = [ZonaCultivo(zona) for zona in constantes.ZONAS_CULTIVO]
-                
                 print("Iniciando juego...")
                 ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos, imagen_hueco, imagen_fondo, imagen_tierra, zonas_cultivo, sistema_clima)
     except Exception as e:

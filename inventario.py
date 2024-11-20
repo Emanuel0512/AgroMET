@@ -26,7 +26,10 @@ class Inventario:
             self.herramienta_actual = herramienta
             
     def get_herramienta_actual(self):
-        return self.herramientas.get(self.herramienta_actual)
+        try:
+            return self.herramientas.get(self.herramienta_actual)
+        except KeyError:
+            return None
         
     def comprar_semilla(self, tipo):
         if tipo in self.semillas:
