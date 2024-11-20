@@ -5,13 +5,17 @@ class Planta:
     # Contador de plantas por zona (clase compartida entre todas las plantas)
     plantas_por_zona = {i: 0 for i in range(len(constantes.ZONAS_CULTIVO))}
 
-    def __init__(self, x, y, zona):
+    def __init__(self, x, y, zona, tipo='arroz'):
         self.rect = pygame.Rect(x, y, constantes.TAMANO_PLANTA, constantes.TAMANO_PLANTA)
         self.estado = 0  # 0: semilla, 1: crecimiento, 2: maduro
         self.necesita_agua = True
         self.cambio_fase_pendiente = False
         self.tiempo_inicio_cambio = 0
         self.zona = zona  # Zona donde está la planta
+        self.tipo = tipo
+        self.info = constantes.INFO_CULTIVOS[tipo]
+        self.veces_regada = 0
+        self.salud = 100
 
         try:
             # Sprites de la planta

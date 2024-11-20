@@ -80,11 +80,31 @@ class Personaje():
         self.forma.y += delta_y
 
     def crear_hueco(self, pos_x, pos_y):
+        # Verificar si el hueco está dentro de alguna zona de cultivo
         for zona in constantes.ZONAS_CULTIVO:
-            nuevo_hueco = pygame.Rect(pos_x, pos_y, constantes.TAMANO_PLANTA, constantes.TAMANO_PLANTA)
-            if zona.colliderect(nuevo_hueco):
-                self.huecos.append(nuevo_hueco)
+            if zona.collidepoint(pos_x, pos_y):
+                # Contar huecos existentes en esta zona
+                huecos_en_zona = sum(1 for h in self.huecos 
+                                   if zona.collidepoint(h[0], h[1]))
+                
+                if huecos_en_zona >= constantes.MAX_HUECOS_POR_ZONA:
+                    print("Esta zona ya tiene el máximo de huecos permitidos")
+                    return False
+                
+                # Ajustar la posición del hueco a la cuadrícula
+                hueco_x = zona.x + ((pos_x - zona.x) // constantes.GRID_SIZE) * constantes.GRID_SIZE
+                hueco_y = zona.y + ((pos_y - zona.y) // constantes.GRID_SIZE) * constantes.GRID_SIZE
+                
+                # Verificar si ya existe un hueco en esta posición
+                for hueco_existente in self.huecos:
+                    if hueco_existente[0] == hueco_x and hueco_existente[1] == hueco_y:
+                        print("Ya existe un hueco en esta posición")
+                        return False
+                
+                self.huecos.append((hueco_x, hueco_y))
                 return True
+                
+        print("Solo puedes crear huecos en las zonas de cultivo")
         return False
 
     def cultivar(self, zonas_cultivo):

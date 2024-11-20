@@ -7,6 +7,11 @@ from NPC import NPC
 from planta import Planta
 import sys
 from inventario import Inventario
+from clima import SistemaClima
+from clima import SistemaClima
+from progreso import SistemaProgreso
+from tutorial import SistemaTutorial
+from logros import SistemaLogros
 
 pygame.init()
 
@@ -120,16 +125,17 @@ def inicializar_juego():
     inventario = Inventario(imagen_pala, imagen_watering_can, imagen_bala)
     grupo_balas = pygame.sprite.Group()
     huecos = []
-    return jugador, npc, pala, grupo_balas, huecos, imagen_hueco, imagen_fondo, imagen_tierra
+    sistema_clima = SistemaClima()
+    return jugador, npc, pala, grupo_balas, huecos, imagen_hueco, imagen_fondo, imagen_tierra, sistema_clima
 
 class ZonaCultivo:
     def __init__(self, rect):
         self.rect = rect
         self.huecos = []
-        self.plantas = {}  # Diccionario para mapear posición del hueco a planta
+        self.plantas = {}  
 
     def puede_agregar_hueco(self):
-        return len(self.huecos) < constantes.MAX_PLANTAS_POR_ZONA
+        return len(self.huecos) < constantes.MAX_HUECOS_POR_ZONA
 
     def agregar_hueco(self, x, y):
         if self.puede_agregar_hueco():
@@ -143,7 +149,7 @@ class ZonaCultivo:
                 if nuevo_hueco.colliderect(hueco):
                     return False
 
-            if len(self.huecos) < constantes.MAX_PLANTAS_POR_ZONA:
+            if len(self.huecos) < constantes.MAX_HUECOS_POR_ZONA:
                 self.huecos.append(nuevo_hueco)
                 return True
         return False
@@ -160,21 +166,20 @@ class ZonaCultivo:
                 return planta.regar()
         return False
     
-def ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos, imagen_hueco, imagen_fondo, imagen_tierra, zonas_cultivo):
+def ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos, imagen_hueco, imagen_fondo, imagen_tierra, zonas_cultivo, sistema_clima):
     reloj = pygame.time.Clock()
     mover_arriba = mover_abajo = mover_izquierda = mover_derecha = False
     dialogo_activo = False
     indice_dialogo = 0
     turno_personaje = False
-    dialogos_npc = ["Hola Miguel", "¿Como estas?", "¡Que buen dia!"]
-    dialogo_personaje = ["Hola Sebastian", "Yo estoy bien, Gracias", "Si, lo es"]
+    dialogos_npc = ["¡Hola Miguel!", "¿Cómo estás?", "¡Qué buen día!"]
+    dialogo_personaje = ["¡Hola Sebastián!", "Estoy bien, gracias", "Sí, lo es"]
 
     run = True
     while run:
         reloj.tick(constantes.FPS)
         ventana.blit(imagen_fondo, (0, 0))
-        
-        # Dibujar zonas de cultivo
+   
         dibujar_zonas_cultivo(ventana, zonas_cultivo, imagen_tierra)
         
         for zona in zonas_cultivo:
@@ -264,16 +269,23 @@ def ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos,
                 if event.key == pygame.K_w: mover_arriba = False
                 if event.key == pygame.K_s: mover_abajo = False
 
-            if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  
                 pos = pygame.mouse.get_pos()
                 for zona in zonas_cultivo:
-                    if zona.rect.collidepoint(pos):
-                        if inventario.herramienta_actual == 'pala':
-                            if zona.agregar_hueco(pos[0], pos[1]):
+                    if zona.rect.collidepoint(pos) and inventario.herramienta_actual == 'pala':
+                        hueco_x = zona.rect.x + ((pos[0] - zona.rect.x) // constantes.TAMANO_PLANTA) * constantes.TAMANO_PLANTA
+                        hueco_y = zona.rect.y + ((pos[1] - zona.rect.y) // constantes.TAMANO_PLANTA) * constantes.TAMANO_PLANTA
+                        
+                        if len(zona.huecos) < 4:  # Límite de 4 huecos por zona
+                            if zona.agregar_hueco(hueco_x, hueco_y):
                                 print("Hueco creado")
-                        elif inventario.herramienta_actual == 'regadera':
-                            if zona.regar_planta(pos):
-                                print("Planta regada")
+                            else:
+                                print("Ya existe un hueco en esta posición")
+                        else:
+                            print("Máximo de huecos alcanzado en esta zona")
+                    elif zona.rect.collidepoint(pos) and inventario.herramienta_actual == 'regadera':
+                        if zona.regar_planta(pos):
+                            print("Planta regada")
 
         herramienta_actual = inventario.get_herramienta_actual()
         if herramienta_actual:
@@ -282,6 +294,13 @@ def ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos,
 
         if inventario.visible:
             inventario.draw(ventana)
+
+        # Actualizar y mostrar información del clima
+        sistema_clima.actualizar()
+        info_clima = sistema_clima.obtener_info()
+        font = pygame.font.Font(None, 24)
+        texto_clima = font.render(f"Temp: {info_clima['temperatura']}°C  Humedad: {info_clima['humedad']}%  {'Lluvia' if info_clima['lluvia'] else 'Despejado'}", True, constantes.WHITE)
+        ventana.blit(texto_clima, (10, constantes.ALTO_VENTANA - 30))
 
         pygame.display.flip()
 
@@ -303,12 +322,12 @@ def menu_principal(ventana):
         ventana.blit(fondo, (0, 0))
         
         titulo_font = pygame.font.Font(None, 72)
-        titulo_text = titulo_font.render("Juego de Granja", True, constantes.WHITE)
+        titulo_text = titulo_font.render("AgroMET - Juego de Granja", True, constantes.WHITE)
         titulo_rect = titulo_text.get_rect(center=(constantes.ANCHO_VENTANA // 2, 100))
         ventana.blit(titulo_text, titulo_rect)
         
-        jugar_boton = draw_button(ventana, "Jugar", constantes.ANCHO_VENTANA // 2 - 100, 300, 200, 50, constantes.GREEN, constantes.WHITE)
-        salir_boton = draw_button(ventana, "Salir", constantes.ANCHO_VENTANA // 2 - 100, 400, 200, 50, constantes.RED, constantes.WHITE)
+        jugar_boton = draw_button(ventana, "Comenzar", constantes.ANCHO_VENTANA // 2 - 100, 300, 200, 50, constantes.GREEN, constantes.WHITE)
+        salir_boton = draw_button(ventana, "Cerrar", constantes.ANCHO_VENTANA // 2 - 100, 400, 200, 50, constantes.RED, constantes.WHITE)
         
         pygame.display.flip()
         
@@ -341,7 +360,7 @@ def pantalla_carga(ventana):
         pygame.draw.rect(ventana, constantes.GREEN, (barra_carga.left, barra_carga.top, barra_carga.width * i // 100, barra_carga.height))
         
         font = pygame.font.Font(None, 36)
-        text = font.render(f"Cargando... {i}%", True, constantes.WHITE)
+        text = font.render(f"Cargando el juego... {i}%", True, constantes.WHITE)
         text_rect = text.get_rect(center=(constantes.ANCHO_VENTANA // 2, barra_carga.bottom + 50))
         ventana.blit(text, text_rect)
         
@@ -351,8 +370,12 @@ def pantalla_carga(ventana):
     
     return True
 
+def nueva_funcion():
+    print("Nueva función agregada!")
+    
 def main():
     try:
+        pygame.init()
         if menu_principal(ventana):
             print("Iniciando pantalla de carga...")
          
@@ -362,22 +385,13 @@ def main():
             print(f"Pantalla de carga completada: {carga_completada}")
             
             if carga_completada:
+                jugador, npc, pala, grupo_balas, huecos, imagen_hueco, imagen_fondo, imagen_tierra, sistema_clima = inicializar_juego()
                 animaciones, imagen_pala, imagen_bala, imagen_npc, imagen_hueco, imagen_fondo, imagen_watering_can = cargar_imagenes()
-                
-                jugador = Personaje(50, 50, animaciones)
-                npc = NPC(100, 100, imagen_npc)
-                pala = Pala(imagen_pala, imagen_bala)
-                grupo_balas = pygame.sprite.Group()
-                huecos = []
-                imagen_tierra = cargar_y_escalar_imagen_tierra("assets//image//tierra.png", constantes.ZONAS_CULTIVO)
-            
                 inventario = Inventario(imagen_pala, imagen_watering_can, imagen_bala)
-    
                 zonas_cultivo = [ZonaCultivo(zona) for zona in constantes.ZONAS_CULTIVO]
                 
                 print("Iniciando juego...")
-                
-                ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos, imagen_hueco, imagen_fondo, imagen_tierra, zonas_cultivo)
+                ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos, imagen_hueco, imagen_fondo, imagen_tierra, zonas_cultivo, sistema_clima)
     except Exception as e:
         print(f"Error en la ejecución del juego: {e}")
         import traceback

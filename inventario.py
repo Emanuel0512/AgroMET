@@ -12,7 +12,7 @@ class Inventario:
         }
         self.herramienta_actual = 'pala'
         self.semillas = {
-            'maiz': {'cantidad': 5, 'precio': 10},
+            'maíz': {'cantidad': 5, 'precio': 10},
             'tomate': {'cantidad': 3, 'precio': 15},
             'zanahoria': {'cantidad': 4, 'precio': 12}
         }
