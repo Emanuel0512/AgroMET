@@ -6,6 +6,7 @@ class SistemaProgreso:
         self.puntos = 0
         self.nivel_actual = 'Principiante'
         self.plantas_cultivadas = 0
+        self.nivel_juego = 1
         self.logros = {
             'primera_planta': False,
             'diez_plantas': False,
@@ -21,9 +22,16 @@ class SistemaProgreso:
         for nivel, puntos in constantes.PUNTOS_NIVEL.items():
             if self.puntos >= puntos:
                 self.nivel_actual = nivel
+        
+        # Verificar si se puede avanzar al siguiente nivel del juego
+        if self.nivel_juego == 1 and self.puntos >= constantes.PUNTOS_OBJETIVO_NIVEL1:
+            self.nivel_juego = 2
+            return True
+        return False
                 
     def registrar_planta_cultivada(self):
         self.plantas_cultivadas += 1
+        self.agregar_puntos(constantes.PUNTOS_POR_PLANTA)  # Dar puntos por cada planta
         if self.plantas_cultivadas == 1 and not self.logros['primera_planta']:
             self.logros['primera_planta'] = True
             self.agregar_puntos(50)

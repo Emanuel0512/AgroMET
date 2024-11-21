@@ -4,8 +4,9 @@ import pygame
 ANCHO_VENTANA = 800
 ALTO_VENTANA = 600
 SCALA_PERSONAJE = 0.4
-SCALA_WATERING_CAN = 0.15
+SCALA_WATERING_CAN = 0.13
 SCALA_HERRAMIENTA = 0.7
+SCALA_HOZ = 0.2
 SECALA_HUECO = 1.2
 
 # COLORES
@@ -120,3 +121,24 @@ PUNTOS_NIVEL = {
     'Agricultor Experimentado': 300,
     'Maestro Agricultor': 600
 }
+
+# Sistema de puntos
+PUNTOS_POR_PLANTA = 100
+PUNTOS_OBJETIVO_NIVEL1 = 1200
+PUNTOS_OBJETIVO_NIVEL2 = 2400
+PUNTOS_OBJETIVO = 1200  # Valor por defecto para el nivel 1
+
+# Zonas de cultivo por nivel
+ZONAS_CULTIVO_NIVEL1 = [
+    pygame.Rect(170, 400, 260, 120),  # Zona inferior izquierda
+    pygame.Rect(280, 121, 260, 120),  # Zona inferior derecha
+    pygame.Rect(280, 1, 260, 120)     # Zona central
+]
+
+ZONAS_CULTIVO_NIVEL2 = [
+    pygame.Rect(50, 450, 260, 120),   # Zona inferior izquierda
+    pygame.Rect(500, 450, 260, 120),  # Zona inferior derecha
+    pygame.Rect(280, 250, 260, 120),  # Zona central
+    pygame.Rect(50, 50, 260, 120),    # Zona superior izquierda
+    pygame.Rect(6, 50, 260, 120)    # Zona superior derecha
+]

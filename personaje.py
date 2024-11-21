@@ -111,3 +111,14 @@ class Personaje:
                     print("¡Planta regada!")
                     return True
         return False
+        
+    def cosechar(self):
+        for planta in self.plantas[:]:  # Usamos una copia de la lista para iterar
+            if self.forma.colliderect(planta.rect):
+                if planta.esta_lista():
+                    planta.visible = False  # Ocultamos la planta
+                    planta.mostrar_mensaje_puntos()  # Mostramos puntos
+                    self.plantas.remove(planta)  # La removemos de la lista
+                    print("¡Planta cosechada!")
+                    return True
+        return False

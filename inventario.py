@@ -1,14 +1,15 @@
 # inventario.py
 import pygame
 import constantes
-from weapon import Pala, WateringCan
+from weapon import Pala, WateringCan, Hoz
 
 class Inventario:
-    def __init__(self, imagen_pala, imagen_regadera, imagen_bala):
+    def __init__(self, imagen_pala, imagen_regadera, imagen_bala, imagen_hoz):
         self.visible = False
         self.herramientas = {
             'pala': Pala(imagen_pala, imagen_bala),
-            'regadera': WateringCan(imagen_regadera)
+            'regadera': WateringCan(imagen_regadera),
+            'hoz': Hoz(imagen_hoz)
         }
         self.herramienta_actual = 'pala'
         self.semillas = {

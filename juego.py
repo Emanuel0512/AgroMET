@@ -35,7 +35,7 @@ def cargar_y_escalar_imagen_tierra(ruta_imagen, zonas_cultivo):
     
     return imagen_tierra
 
-def cargar_imagenes():
+def cargar_imagenes(nivel=1):
     animaciones = []
     for i in range(4):
         img = pygame.image.load(f"assets//image//characters//player//player_{i}.png").convert_alpha()
@@ -54,18 +54,23 @@ def cargar_imagenes():
     imagen_hueco = pygame.image.load(f"assets//image//hueco.png").convert_alpha()
     imagen_hueco = escalar_img(imagen_hueco, constantes.SECALA_HUECO)
 
-    imagen_fondo = pygame.image.load("assets//image//mapa//fondo.jpg").convert()
+    # Cargar fondo según el nivel
+    fondo_path = "assets//image//mapa//fondo.jpg" if nivel == 1 else "assets//image//mapa//fondo_2.jpg"
+    imagen_fondo = pygame.image.load(fondo_path).convert()
     imagen_fondo = pygame.transform.scale(imagen_fondo, (constantes.ANCHO_VENTANA, constantes.ALTO_VENTANA))
 
     imagen_watering_can = pygame.image.load(f"assets//image//watering can.png").convert_alpha()
     imagen_watering_can = escalar_img(imagen_watering_can, constantes.SCALA_WATERING_CAN)
 
-    return animaciones, imagen_pala, imagen_bala, imagen_npc, imagen_hueco, imagen_fondo, imagen_watering_can
+    imagen_hoz = pygame.image.load("assets//image//hoz.png").convert_alpha()
+    imagen_hoz = escalar_img(imagen_hoz, constantes.SCALA_HERRAMIENTA)
+
+    return animaciones, imagen_pala, imagen_bala, imagen_npc, imagen_hueco, imagen_fondo, imagen_watering_can, imagen_hoz
 
 def dibujar_zonas_cultivo(ventana, zonas_cultivo, imagen_tierra):
     for zona in zonas_cultivo:
         ventana.blit(imagen_tierra, zona)
-        pygame.draw.rect(ventana, constantes.COLOR_ZONA_CULTIVO, zona, 2)
+        #pygame.draw.rect(ventana, constantes.COLOR_ZONA_CULTIVO, zona, 2)
 
 def check_proximity(personaje, npc):
     return personaje.forma.colliderect(npc.rect)
@@ -83,8 +88,7 @@ def mostrar_mensaje_con_fondo_texto(ventana, mensaje, x, y, color_texto, color_f
     texto_rect.topleft = (x, y)
 
     padding = 10
-    rect_fondo = pygame.Rect(texto_rect.left - padding, texto_rect.top - padding,
-                             texto_rect.width + 2 * padding, texto_rect.height + 2 * padding)
+    rect_fondo = pygame.Rect(texto_rect.left - padding, texto_rect.top - padding, texto_rect.width + 2 * padding, texto_rect.height + 2 * padding)
 
     pygame.draw.rect(ventana, color_fondo, rect_fondo)
     ventana.blit(texto, (x, y))
@@ -102,23 +106,24 @@ def crear_hueco(jugador, pos_x, pos_y, zonas_cultivo):
     print("No puedes crear un hueco aquí")
     return False
 
-def inicializar_juego():
-    animaciones, imagen_pala, imagen_bala, imagen_npc, imagen_hueco, imagen_fondo, imagen_watering_can = cargar_imagenes()
-    imagen_tierra = cargar_y_escalar_imagen_tierra("assets//image//tierra.png", constantes.ZONAS_CULTIVO)
+def inicializar_juego(nivel=1):
+    animaciones, imagen_pala, imagen_bala, imagen_npc, imagen_hueco, imagen_fondo, imagen_watering_can, imagen_hoz = cargar_imagenes(nivel)
+    zonas_cultivo = constantes.ZONAS_CULTIVO_NIVEL1 if nivel == 1 else constantes.ZONAS_CULTIVO_NIVEL2
+    imagen_tierra = cargar_y_escalar_imagen_tierra("assets//image//tierra.png", zonas_cultivo)
     jugador = Personaje(constantes.ANCHO_VENTANA // 2, constantes.ALTO_VENTANA // 2, animaciones)
     npc = NPC(100, 100, imagen_npc)
     pala = Pala(imagen_pala, imagen_bala)
-    inventario = Inventario(imagen_pala, imagen_watering_can, imagen_bala)
+    inventario = Inventario(imagen_pala, imagen_watering_can, imagen_bala, imagen_hoz)
     grupo_balas = pygame.sprite.Group()
     huecos = []
     sistema_clima = SistemaClima()
-    return jugador, npc, pala, grupo_balas, huecos, imagen_hueco, imagen_fondo, imagen_tierra, sistema_clima, inventario, imagen_hueco
+    return jugador, npc, pala, grupo_balas, huecos, imagen_hueco, imagen_fondo, imagen_tierra, sistema_clima, inventario, imagen_hueco, imagen_hoz
 
 class ZonaCultivo:
     def __init__(self, rect):
         self.rect = rect
         self.huecos = []
-        self.plantas = {}  # Changed back to dictionary with hueco as key
+        self.plantas = {} 
         self.max_plantas = constantes.MAX_HUECOS_POR_ZONA
 
     def puede_agregar_hueco(self):
@@ -178,7 +183,7 @@ class ZonaCultivo:
                 return planta.regar()
         return False
     
-def ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos, imagen_hueco, imagen_fondo, imagen_tierra, zonas_cultivo, sistema_clima):
+def ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos, imagen_hueco, imagen_fondo, imagen_tierra, zonas_cultivo, sistema_clima, sistema_puntos, nivel=1):
     reloj = pygame.time.Clock()
     mover_arriba = mover_abajo = mover_izquierda = mover_derecha = False
     dialogo_activo = False
@@ -283,6 +288,8 @@ def ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos,
                     inventario.cambiar_herramienta('pala')
                 if event.key == pygame.K_2:
                     inventario.cambiar_herramienta('regadera')
+                if event.key == pygame.K_3:
+                    inventario.cambiar_herramienta('hoz')
                 if event.key == pygame.K_r and inventario.herramienta_actual == 'regadera':
                     jugador.regar()
 
@@ -295,6 +302,14 @@ def ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos,
             if event.type == pygame.MOUSEBUTTONDOWN:
                 pos = pygame.mouse.get_pos()
                 if event.button == 1:  # Click izquierdo
+                    # Verificar si se hizo clic en el botón Next
+                    if sistema_puntos.boton_next and sistema_puntos.boton_next.collidepoint(pos):
+                        sistema_puntos.nivel_actual += 1
+                        # Cargar el nuevo fondo para el nivel 2
+                        imagen_fondo = pygame.image.load("assets/image/mapa/fondo_2.jpg")
+                        imagen_fondo = pygame.transform.scale(imagen_fondo, (constantes.ANCHO_VENTANA, constantes.ALTO_VENTANA))
+                        sistema_puntos.puntos = 0  # Reiniciar puntos para el nuevo nivel
+                        continue
                     for zona in zonas_cultivo:
                         if zona.rect.collidepoint(pos) and inventario.herramienta_actual == 'pala':
                             if len(zona.huecos) < constantes.MAX_HUECOS_POR_ZONA:
@@ -308,14 +323,23 @@ def ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos,
                         elif zona.rect.collidepoint(pos) and inventario.herramienta_actual == 'regadera':
                             if zona.regar_planta(pos):
                                 print("Planta regada")
-                elif event.button == 3:  # Click derecho para plantar o ver detalles
+                elif event.button == 3:  # Click derecho para plantar, recolectar o ver detalles
                     for zona in zonas_cultivo:
                         # Primero, verificar si hay una planta en la posición del click
-                        for planta in zona.plantas.values():
+                        for hueco_pos, planta in list(zona.plantas.items()):
                             if planta.rect.collidepoint(pos):
-                                # Mostrar detalles de la planta
-                                details_window = PlantDetailsWindow(planta)
-                                details_window.run(ventana)
+                                if inventario.herramienta_actual == 'hoz' and planta.estado == 2 and not planta.recolectada:
+                                    # Recolectar la planta
+                                    planta.recolectada = True
+                                    sistema_puntos.agregar_puntos(constantes.PUNTOS_POR_PLANTA)  # Dar puntos por planta recolectada
+                                    del zona.plantas[hueco_pos]
+                                    print(f"Planta recolectada! +{constantes.PUNTOS_POR_PLANTA} puntos")
+                                    if sistema_puntos.objetivo_cumplido():
+                                        print("¡Felicitaciones! Has alcanzado el objetivo de puntos!")
+                                else:
+                                    # Mostrar detalles de la planta
+                                    details_window = PlantDetailsWindow(planta)
+                                    details_window.run(ventana)
                                 break
                         # Si no se hizo click en una planta, intentar plantar
                         if zona.rect.collidepoint(pos):
@@ -367,9 +391,47 @@ def ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos,
         # Mostrar el tutorial si está activo
         sistema_tutorial.mostrar_tutorial(ventana)
         
+        # Dibujar el contador de puntos
+        sistema_puntos.dibujar(ventana)
+        
+        # Mostrar mensaje de victoria si se alcanzó el objetivo
+        sistema_puntos.mostrar_mensaje_victoria(ventana)
+        
         pygame.display.flip()
 
     return True
+
+def mostrar_mensaje_nivel_completado(ventana):
+    # Oscurecer la pantalla
+    overlay = pygame.Surface((constantes.ANCHO_VENTANA, constantes.ALTO_VENTANA))
+    overlay.fill(constantes.BLACK)
+    overlay.set_alpha(128)
+    ventana.blit(overlay, (0, 0))
+    
+    # Mostrar mensaje
+    font = pygame.font.Font(None, 64)
+    mensaje = font.render("¡Nivel Completado!", True, constantes.WHITE)
+    mensaje_rect = mensaje.get_rect(center=(constantes.ANCHO_VENTANA // 2, constantes.ALTO_VENTANA // 2))
+    ventana.blit(mensaje, mensaje_rect)
+    
+    # Mostrar instrucción
+    font_pequeño = pygame.font.Font(None, 32)
+    instruccion = font_pequeño.render("Presiona ESPACIO para continuar", True, constantes.WHITE)
+    instruccion_rect = instruccion.get_rect(center=(constantes.ANCHO_VENTANA // 2, mensaje_rect.bottom + 50))
+    ventana.blit(instruccion, instruccion_rect)
+    
+    pygame.display.flip()
+    
+    # Esperar a que el jugador presione ESPACIO
+    esperando = True
+    while esperando:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    esperando = False
 
 def draw_button(screen, text, x, y, width, height, color, text_color):
     pygame.draw.rect(screen, color, (x, y, width, height))
@@ -480,9 +542,78 @@ def mostrar_menu_plantas(ventana, pos):
                 if event.key == pygame.K_ESCAPE:  # ESC para cancelar
                     return None
     
+class SistemaPuntos:
+    def __init__(self):
+        self.puntos = 0
+        self.font = pygame.font.Font(None, 36)
+        self.nivel_actual = 1
+        self.boton_next = None
+    
+    def agregar_puntos(self, cantidad):
+        self.puntos += cantidad
+        
+    def dibujar(self, ventana):
+        # Determinar el objetivo según el nivel
+        objetivo = constantes.PUNTOS_OBJETIVO_NIVEL1 if self.nivel_actual == 1 else constantes.PUNTOS_OBJETIVO_NIVEL2
+        
+        # Crear superficie semitransparente para el fondo
+        texto = self.font.render(f'Puntos: {self.puntos}/{objetivo}', True, (255, 215, 0))  # Color amarillo dorado
+        fondo = pygame.Surface((texto.get_width() + 20, texto.get_height() + 20))
+        fondo.fill((0, 0, 0))
+        fondo.set_alpha(200)
+        
+        # Posicionar y dibujar el fondo y texto
+        ventana.blit(fondo, (5, 5))
+        ventana.blit(texto, (15, 15))
+        
+    def objetivo_cumplido(self):
+        objetivo = constantes.PUNTOS_OBJETIVO_NIVEL1 if self.nivel_actual == 1 else constantes.PUNTOS_OBJETIVO_NIVEL2
+        return self.puntos >= objetivo
+
+    def mostrar_mensaje_victoria(self, ventana):
+        if self.objetivo_cumplido():
+            # Crear superficie semitransparente para el fondo
+            fondo = pygame.Surface((400, 250))  # Aumentado el alto para el botón
+            fondo.fill((0, 0, 0))
+            fondo.set_alpha(200)
+            
+            # Posicionar en el centro de la pantalla
+            pos_x = (constantes.ANCHO_VENTANA - 400) // 2
+            pos_y = (constantes.ALTO_VENTANA - 250) // 2
+            
+            ventana.blit(fondo, (pos_x, pos_y))
+            
+            # Renderizar texto
+            font = pygame.font.Font(None, 48)
+            texto = font.render("¡Felicidades!", True, (255, 215, 0))
+            texto2 = font.render(f"Ganaste el nivel {self.nivel_actual}", True, (255, 255, 255))
+            
+            # Centrar y mostrar textos
+            ventana.blit(texto, (pos_x + (400 - texto.get_width()) // 2, pos_y + 50))
+            ventana.blit(texto2, (pos_x + (400 - texto2.get_width()) // 2, pos_y + 100))
+            
+            # Crear y mostrar botón Next
+            boton_width = 120
+            boton_height = 40
+            boton_x = pos_x + (400 - boton_width) // 2
+            boton_y = pos_y + 160
+            
+            self.boton_next = pygame.Rect(boton_x, boton_y, boton_width, boton_height)
+            pygame.draw.rect(ventana, (0, 200, 0), self.boton_next)  # Verde
+            
+            # Texto del botón
+            font_boton = pygame.font.Font(None, 36)
+            texto_boton = font_boton.render("Next", True, (255, 255, 255))
+            texto_rect = texto_boton.get_rect(center=self.boton_next.center)
+            ventana.blit(texto_boton, texto_rect)
+            
+            return True
+        return False
+
 def main():
     try:
         pygame.init()
+        sistema_puntos = SistemaPuntos()
         if menu_principal(ventana):
             print("Iniciando pantalla de carga...")
          
@@ -492,11 +623,22 @@ def main():
             print(f"Pantalla de carga completada: {carga_completada}")
             
             if carga_completada:
-                # Inicializar todos los componentes del juego
-                jugador, npc, pala, grupo_balas, huecos, imagen_hueco, imagen_fondo, imagen_tierra, sistema_clima, inventario, imagen_hueco = inicializar_juego()
-                zonas_cultivo = [ZonaCultivo(zona) for zona in constantes.ZONAS_CULTIVO]
-                print("Iniciando juego...")
-                ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos, imagen_hueco, imagen_fondo, imagen_tierra, zonas_cultivo, sistema_clima)
+                nivel_actual = 1
+                while nivel_actual <= 2:
+                    # Inicializar todos los componentes del juego para el nivel actual
+                    jugador, npc, pala, grupo_balas, huecos, imagen_hueco, imagen_fondo, imagen_tierra, sistema_clima, inventario, imagen_hueco, imagen_hoz = inicializar_juego(nivel_actual)
+                    zonas_cultivo = [ZonaCultivo(zona) for zona in (constantes.ZONAS_CULTIVO_NIVEL1 if nivel_actual == 1 else constantes.ZONAS_CULTIVO_NIVEL2)]
+                    print(f"Iniciando nivel {nivel_actual}...")
+                    
+                    if ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos, imagen_hueco, imagen_fondo, imagen_tierra, zonas_cultivo, sistema_clima, sistema_puntos):
+                        if sistema_puntos.puntos >= (constantes.PUNTOS_OBJETIVO_NIVEL1 if nivel_actual == 1 else constantes.PUNTOS_OBJETIVO_NIVEL2):
+                            nivel_actual += 1
+                            if nivel_actual <= 2:
+                                mostrar_mensaje_nivel_completado(ventana)
+                        else:
+                            break
+                    else:
+                        break
     except Exception as e:
         print(f"Error en la ejecución del juego: {e}")
         import traceback

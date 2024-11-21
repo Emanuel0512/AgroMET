@@ -6,6 +6,10 @@ class Planta:
     plantas_por_zona = {i: 0 for i in range(len(constantes.ZONAS_CULTIVO))}
 
     def __init__(self, x, y, zona=None, tipo='arroz'):
+        self.recolectada = False
+        self.visible = True  # Aseguramos que inicie visible
+        self.mensaje_puntos = None
+        self.tiempo_mensaje = 0
         self.rect = pygame.Rect(x, y, constantes.TAMANO_PLANTA, constantes.TAMANO_PLANTA)
         self.estado = 0  # 0: semilla, 1: crecimiento, 2: maduro
         self.necesita_agua = True
@@ -32,6 +36,8 @@ class Planta:
         self.veces_regada = 0
         self.salud = 100
         self.usar_rectangulos = False
+        self.mensaje_puntos = None
+        self.tiempo_mensaje = 0
         
         # Colores para el modo de respaldo
         self.colores = [(139, 69, 19), (34, 139, 34)]  # Marrón para tierra, verde para planta
@@ -129,11 +135,38 @@ class Planta:
                         print(f"No se puede reproducir en zona {i}: límite alcanzado")
         return None
 
+    def mostrar_mensaje_puntos(self):
+        self.mensaje_puntos = "+100"
+        self.tiempo_mensaje = pygame.time.get_ticks()
+
+    def esta_lista(self):
+        return self.estado == len(self.sprites) - 1
+
     def draw(self, surface):
+        if not self.visible:
+            return
+            
+        # Dibujar mensaje de puntos si existe
+        if self.mensaje_puntos:
+            tiempo_actual = pygame.time.get_ticks()
+            if tiempo_actual - self.tiempo_mensaje < 3000:  # Mostrar por 3 segundos
+                font = pygame.font.Font(None, 36)
+                texto = font.render(self.mensaje_puntos, True, (0, 255, 0))
+                pos_x = self.rect.centerx - texto.get_width() // 2
+                pos_y = self.rect.top - 20
+                surface.blit(texto, (pos_x, pos_y))
+            else:
+                self.mensaje_puntos = None
+            
+        
+
         # Dibujar el sprite de la planta correspondiente al estado actual
         if self.sprites and 0 <= self.estado < len(self.sprites):
             sprite_actual = self.sprites[self.estado]
-            surface.blit(sprite_actual, (self.rect.x + 40, self.rect.y + 25))  # Aumentamos el desplazamiento horizontal
+            # Calculamos el centro exacto y ajustamos la posición vertical
+            pos_x = self.rect.x + (self.rect.width - sprite_actual.get_width()) // 2 + 40
+            pos_y = self.rect.y + (self.rect.height - sprite_actual.get_height()) // 2 + 35
+            surface.blit(sprite_actual, (pos_x, pos_y))
             
             # Solo dibujamos detalles adicionales si es necesario
             if self.estado > 0 and self.usar_rectangulos:  # Si ya no es semilla y estamos en modo respaldo
