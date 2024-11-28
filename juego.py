@@ -1,3 +1,4 @@
+
 import pygame
 import constantes
 from personaje import Personaje
@@ -189,10 +190,9 @@ def ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos,
     dialogo_activo = False
     indice_dialogo = 0
     turno_personaje = False
-    dialogos_npc = ["¡Hola Miguel!", "¿Cómo estás?", "¡Qué buen día!"]
-    dialogo_personaje = ["¡Hola Sebastián!", "Estoy bien, gracias", "Sí, lo es"]
+    dialogos_npc = ["¡Buenos dias¡, Parece que estas un poco perdido","Tranquilo, Mira, esta es la zona donde cultivamo el arroz","No te preocupes, Mira","yo ya me encargue de preparar la tierra cuidadosamente","ahora es tu turno","Claro!, primero caba cuatro huecos en cada una de las zonas de cultivo, y luego..","planta estas semillas de arroz en cada hueco que hiciste","No, Ahora tienes que regar cada planta poco a poco hasta que florescan","Cuando florescan, puedes recolectarlas con ese extraño objeto que tienes en tu bolsillo","y listo, estare observando desde aqui, si necesitas algo te lo repetire todo de nuevo"]
+    dialogo_personaje = ["Si...No estoy seguro de que hacer, ni como ayudar aqui", "¡Oh! pero y yo como puedo ayudar? tan solo soy un niño...", "¿?", "Con mis brazos debiles no hubiera podido hacer tal cosa...","quien? yo?", "luego..."," y ya?","Asi que para eso servia esta chocolatera o regadera... o lo que sea esto","que? aaa...el cuchillo raro, no se que tine mi papa en la cabeza para darme esto...","muchas gracias Sebastian"]
     
-    # Inicializar el sistema de tutorial
     sistema_tutorial = SistemaTutorial()
 
     run = True
@@ -256,22 +256,25 @@ def ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos,
                 run = False
                 
             if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    if sistema_tutorial.visible:
+                        sistema_tutorial.ocultar()
                 if event.key == pygame.K_a: 
                     mover_izquierda = True
-                    if sistema_tutorial.paso_actual == 1:  # Tutorial de movimiento
-                        sistema_tutorial.siguiente_paso()
+                    if sistema_tutorial.visible:  # Tutorial de movimiento
+                        sistema_tutorial.paso_actual += 1
                 if event.key == pygame.K_d: 
                     mover_derecha = True
-                    if sistema_tutorial.paso_actual == 1:
-                        sistema_tutorial.siguiente_paso()
+                    if sistema_tutorial.visible:
+                        sistema_tutorial.paso_actual += 1
                 if event.key == pygame.K_w: 
                     mover_arriba = True
-                    if sistema_tutorial.paso_actual == 1:
-                        sistema_tutorial.siguiente_paso()
+                    if sistema_tutorial.visible:
+                        sistema_tutorial.paso_actual += 1  # Tutorial de movimiento
                 if event.key == pygame.K_s: 
                     mover_abajo = True
-                    if sistema_tutorial.paso_actual == 1:
-                        sistema_tutorial.siguiente_paso()
+                    if sistema_tutorial.visible:
+                            sistema_tutorial.paso_actual += 1
                 
                 if event.key == pygame.K_SPACE and dialogo_activo:
                     turno_personaje = not turno_personaje
@@ -279,9 +282,7 @@ def ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos,
                         indice_dialogo += 1
                         if indice_dialogo >= len(dialogos_npc):
                             indice_dialogo = 0  
-                
-                
-                
+                    
                 if event.key == pygame.K_i:
                     inventario.toggle()
                 if event.key == pygame.K_1:
@@ -389,7 +390,7 @@ def ejecutar_juego(ventana, jugador, inventario, npc, pala, grupo_balas, huecos,
         ventana.blit(texto_clima, (10, constantes.ALTO_VENTANA - 30))
 
         # Mostrar el tutorial si está activo
-        sistema_tutorial.mostrar_tutorial(ventana)
+        sistema_tutorial.dibujar(ventana)
         
         # Dibujar el contador de puntos
         sistema_puntos.dibujar(ventana)

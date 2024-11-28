@@ -1,43 +1,43 @@
 import pygame
-import constantes
 
 class SistemaTutorial:
     def __init__(self):
-        self.tutorial_activo = True
-        self.paso_actual = 0
-        self.pasos_tutorial = [
-            "¡Bienvenido a la Granja Educativa!",
-            "Usa las teclas WASD para moverte",
-            "Presiona 1 para seleccionar la pala",
-            "Presiona 2 para seleccionar la regadera",
-            "Acércate a las zonas marrones para cultivar",
-            "¡Aprende mientras cultivas!"
+        self.tutorial_texto = [
+            "¡Bienvenido al juego!",
+            "Controles:",
+            "W - Mover arriba",
+            "S - Mover abajo",
+            "A - Mover izquierda",
+            "D - Mover derecha",
+            "1 - Usar pala",
+            "2 - Usar regadera",
+            "3 - Usar hoz",
+            "Espacio - Interactuar",
+            "Haz clic izquierdo para crear huecos.",
+            "Haz clic derecho para plantar o recolectar.",
+            "¡Buena suerte!"
         ]
-        self.font = pygame.font.Font(None, 32)
-        self.completado = False
+        self.font = pygame.font.Font(None, 36)
+        self.visible = True  # Al iniciar, el tutorial es visible
+        self.paso_actual = 0  # Para controlar el paso actual del tutorial
 
-    def mostrar_tutorial(self, ventana):
-        if self.tutorial_activo and not self.completado:
-            mensaje = self.pasos_tutorial[self.paso_actual]
-            texto = self.font.render(mensaje, True, constantes.WHITE)
-            fondo = pygame.Surface((texto.get_width() + 20, texto.get_height() + 20))
-            fondo.fill(constantes.BLACK)
-            fondo.set_alpha(200)
-            
-            pos_x = (constantes.ANCHO_VENTANA - fondo.get_width()) // 2
-            pos_y = constantes.ALTO_VENTANA - 100
-            
-            ventana.blit(fondo, (pos_x, pos_y))
-            ventana.blit(texto, (pos_x + 10, pos_y + 10))
+    def dibujar(self, ventana):
+        if not self.visible:
+            return
+        
+        # Crear fondo semitransparente
+        fondo = pygame.Surface((650, 550))
+        fondo.fill((0, 0, 0))
+        fondo.set_alpha(200)  # Transparente
 
-    def siguiente_paso(self):
-        if self.paso_actual < len(self.pasos_tutorial) - 1:
-            self.paso_actual += 1
-        else:
-            self.completado = True
-            self.tutorial_activo = False
+        ventana.blit(fondo, (90, 20))  # Posicionar en el centro
 
-    def reiniciar_tutorial(self):
-        self.tutorial_activo = True
-        self.paso_actual = 0
-        self.completado = False
+        # Dibujar texto
+        y_offset = 20
+        for linea in self.tutorial_texto:
+            texto = self.font.render(linea, True, (255, 255, 255))
+            ventana.blit(texto, (200, 50 + y_offset))  # Ajustar la posición
+            y_offset += 30
+
+    def ocultar(self):
+        self.visible = False
